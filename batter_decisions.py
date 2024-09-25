@@ -8,12 +8,11 @@ import streamlit as st
 data = pd.read_csv('restrictedcounty copy.csv')
 player_names = data['Batter'].unique()
 
-
 @st.cache_data
-def swingdecisions(batter,graphtype):
+def swingdecisions(batter):
     # Load data
     data = pd.read_csv('restrictedcounty copy.csv')
-    #print(data['Connection'].unique().tolist())
+    
     # Remove outliers
     def remove_outliers(df, column):
         Q1 = df[column].quantile(0.25)
@@ -33,163 +32,112 @@ def swingdecisions(batter,graphtype):
     coordsy = [-1]
     coordsz = [0]
     
-    
-    
     # Generate coordinate ranges
-    for i in coordsy:  # Create a copy of coordsy to iterate over
+    for i in coordsy:  
         nextlength = i + boxy
         if nextlength <= 1:
             coordsy.append(nextlength)
         else:
             break
         
-    for i in coordsz:  # Create a copy of coordsz to iterate over
+    for i in coordsz:  
         nextlength = i + boxz
         if nextlength <= 1.3:
             coordsz.append(nextlength)
         else:
             break
         
-    coordsy = [round(value, 2) for value in coordsy]  # Ensure initial values are rounded to 2dp
+    coordsy = [round(value, 2) for value in coordsy]  
     coordsz = [round(value, 2) for value in coordsz]
     
     # Initialize the DataFrame for swings
-    swings = pd.DataFrame(index=coordsy, columns=coordsz)
-    swings = swings.apply(pd.to_numeric, errors='coerce')  # Ensure all entries are numeric or NaN
-    
-    # Process each batter
-    player_names = data['Batter'].unique().tolist()
-    
-    
-    
+    def initialize_swings():
+        swings = pd.DataFrame(index=coordsy, columns=coordsz)
+        swings = swings.apply(pd.to_numeric, errors='coerce') 
+        return swings
+
     player_data = data[data['Batter'] == batter]
-    
-    if graphtype == 'Swing':
+
+    # Create a function to calculate swing percentages based on graph type
+    def calculate_percentages(player_data, coordsy, coordsz, boxy, boxz, mode):
+        swings = initialize_swings()
+
         for i in coordsy:
-           for j in coordsz:
+            for j in coordsz:
                 filtered_data = player_data[(player_data['PastY'] >= i) & (player_data['PastY'] < i + boxy) &
-                                                (player_data['PastZ'] >= j) & (player_data['PastZ'] < j + boxz)]
-        
-                swing = 0
-                non_swing = 0
-        
-                for index, row in filtered_data.iterrows():
-                    if row['Shot'] in ['Back Defence', 'No Shot', 'Forward Defence', 'Padded Away', 'Drop and Run']:
-                        non_swing += 1
-                    elif pd.isna(row['Shot']):
-                        continue
-                    else:
-                        swing += 1
-        
-                    # Calculate swing percentage and update the swings DataFrame
-                if swing + non_swing > 0:
-                    swing_percentage = swing / (swing + non_swing)
+                                            (player_data['PastZ'] >= j) & (player_data['PastZ'] < j + boxz)]
+                
+                count1 = 0
+                count2 = 0
+
+                for _, row in filtered_data.iterrows():
+                    if mode == 'Swing':
+                        if row['Shot'] in ['Back Defence', 'No Shot', 'Forward Defence', 'Padded Away', 'Drop and Run']:
+                            count2 += 1
+                        elif not pd.isna(row['Shot']):
+                            count1 += 1
+                    elif mode == 'Middle':
+                        if row['Shot'] not in ['No Shot', 'Padded Away', 'Left'] and row['Connection'] == 'Middled':
+                            count1 += 1
+                        elif not pd.isna(row['Connection']):
+                            count2 += 1
+                    elif mode == 'Edge':
+                        if row['Shot'] not in ['No Shot', 'Padded Away', 'Left'] and row['Connection'] in [
+                            'Inside Edge', 'Think Edge', 'Outside Edge', 'Leading Edge', 'Top Edge', 'Bottom Edge']:
+                            count1 += 1
+                        elif not pd.isna(row['Connection']):
+                            count2 += 1
+
+                total = count1 + count2
+                if total > 0:
+                    swings.loc[i, j] = count1 / total
                 else:
-                    swing_percentage = 0
-                    
-                swings.loc[i, j] = swing_percentage
-    
-    elif graphtype == 'Middle':
-            for i in coordsy:
-               for j in coordsz:
-                    filtered_data = player_data[(player_data['PastY'] >= i) & (player_data['PastY'] < i + boxy) &
-                                                    (player_data['PastZ'] >= j) & (player_data['PastZ'] < j + boxz)]
-            
-                    middled = 0
-                    not_middled = 0
-            
-                    for index, row in filtered_data.iterrows():
-                        if row['Shot'] in ['No Shot', 'Padded Away','Left']:
-                            continue
-                        elif row['Connection'] in ['Middled']:
-                            middled += 1
-                        elif pd.isna(row['Connection']):
-                            continue
-                        else:
-                            not_middled += 1
-            
-                        # Calculate swing percentage and update the swings DataFrame
-                    if middled + not_middled > 0:
-                        swing_percentage = middled / (middled + not_middled)
-                    else:
-                        swing_percentage = 0
-                    
-                    swings.loc[i, j] = swing_percentage
-    
-    elif graphtype == 'Edge':
-            for i in coordsy:
-               for j in coordsz:
-                    filtered_data = player_data[(player_data['PastY'] >= i) & (player_data['PastY'] < i + boxy) &
-                                                    (player_data['PastZ'] >= j) & (player_data['PastZ'] < j + boxz)]
-            
-                    edged = 0
-                    not_edged = 0
-            
-                    for index, row in filtered_data.iterrows():
-                        if row['Shot'] in ['No Shot', 'Padded Away','Left']:
-                            continue
-                        elif row['Connection'] in ['Inside Edge', 'Think Edge', 'Outside Edge', 'Leading Edge'
-                                                   ,'Top Edge','Bottom Edge']:
-                            edged += 1
-                        elif pd.isna(row['Connection']):
-                            continue
-                        else:
-                            not_edged += 1
-            
-                        # Calculate swing percentage and update the swings DataFrame
-                    if edged + not_edged > 0:
-                        swing_percentage = edged / (edged + not_edged)
-                    else:
-                        swing_percentage = 0
-                        
-                    swings.loc[i, j] = swing_percentage
-    #print(f"Swings DataFrame for batter {batter}:")
-    #print(swings)
-    
-    fig, ax = plt.subplots(figsize=(12, 9))
+                    swings.loc[i, j] = 0
+        return swings
+
+    # Calculate Swing, Middle, and Edge percentages
+    swing_data = calculate_percentages(player_data, coordsy, coordsz, boxy, boxz, 'Swing')
+    middle_data = calculate_percentages(player_data, coordsy, coordsz, boxy, boxz, 'Middle')
+    edge_data = calculate_percentages(player_data, coordsy, coordsz, boxy, boxz, 'Edge')
+
+    # Plot the data on a single figure with 3 subplots
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    def create_heatmap(ax, data, title):
+        cax = ax.matshow(data, cmap='coolwarm', interpolation='nearest')
+        ax.set_xticks(np.arange(len(data.columns)))
+        ax.set_yticks(np.arange(len(data.index)))
+        ax.set_xticklabels(data.columns, rotation=90)
+        ax.set_yticklabels(data.index)
+        ax.set_title(title)
+
+        for i in range(len(data.index)):
+            for j in range(len(data.columns)):
+                ax.text(j, i, f'{data.iloc[i, j]:.2f}', ha='center', va='center', color='white')
+
+        ax.invert_yaxis()
+        ax.set_xticks([])  # Remove X-axis ticks
+        ax.set_yticks([])
+
+    # Create heatmaps for Swing, Middle, and Edge
+    create_heatmap(axes[0], swing_data, f'{batter} - Swing')
+    create_heatmap(axes[1], middle_data, f'{batter} - Middle')
+    create_heatmap(axes[2], edge_data, f'{batter} - Edge')
+
+    # Display stumps on all heatmaps
     stumpspath = 'stumps copy.png'
     stumps = mpimg.imread(stumpspath)
-    
-    # Create a heatmap
-    cax = ax.matshow(swings, cmap='coolwarm', interpolation='nearest')
-    
-    # Add color bar
-    fig.colorbar(cax)
-    
-    # Set up the grid labels
-    ax.set_xticks(np.arange(len(swings.index)))
-    ax.set_yticks(np.arange(len(swings.columns)))
-    
-    # Label the ticks
-    ax.set_xticklabels(swings.index)
-    ax.set_yticklabels(swings.columns)
-    
-    
-    # Rotate the x labels
-    plt.xticks(rotation=90)
-    
-    # Add values inside each grid cell
-    for i in range(len(swings.columns)):
-        for j in range(len(swings.index)):
-            ax.text(j, i, f'{swings.iloc[i, j]:.2f}', ha='center', va='center', color='white')
-    
-    ax.invert_yaxis()
-    
+    for ax in axes:
+        ax.imshow(stumps, extent=[3.55, 4.45, -0.6, 4.2], alpha=0.7, zorder=2)
+        ax.set_xlim(-0.5, 8.5)
+        ax.set_ylim(-0.5, 8.5)
 
-    ax.imshow(stumps,extent=[3.55, 4.45, -0.6, 4.2], alpha=0.7, zorder=2)
-    ax.set_xlim(-0.5, 8.5)  # X-axis limits to cover all 9 columns
-    ax.set_ylim(-0.5, 8.5)
-    ax.set_xticks([])  # Remove X-axis ticks
-    ax.set_yticks([])
-    #ax.set_aspect(aspect=(2 / 1.3))
-    plt.title('Grid Heatmap with Values for '+batter+' ('+graphtype+')', fontsize=13, pad=10)
-    #plt.savefig('heatmap_plot.png', dpi=300)
+    plt.tight_layout()
     st.pyplot(fig)
 
+# Streamlit App
 st.title("Batter Heatmaps")
 batter = st.selectbox("Select a Batsman", player_names)
-graphtype = st.selectbox("Graph Type", ['Swing', 'Middle', 'Edge'])
 
 if st.button("Generate Batter Graph"):
-    fig = swingdecisions(batter, graphtype)
-    
+    swingdecisions(batter)
