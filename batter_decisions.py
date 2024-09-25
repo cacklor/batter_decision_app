@@ -101,7 +101,7 @@ def swingdecisions(batter):
     edge_data = calculate_percentages(player_data, coordsy, coordsz, boxy, boxz, 'Edge')
 
     # Plot the data on a single figure with 3 subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(36, 12))
 
     def create_heatmap(ax, data, title):
         cax = ax.matshow(data, cmap='coolwarm', interpolation='nearest')
