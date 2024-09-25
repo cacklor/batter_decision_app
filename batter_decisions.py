@@ -137,7 +137,7 @@ def swingdecisions(batter):
 
 # Streamlit App
 st.title("Batter Heatmaps")
-batter = st.selectbox("Select a Batsman", player_names)
+batter = st.selectbox("Select a Batsman", player_names.sort())
 
 if st.button("Generate Batter Graph"):
     swingdecisions(batter)
