@@ -18,8 +18,8 @@ def swingdecisions(batter):
         Q1 = df[column].quantile(0.25)
         Q3 = df[column].quantile(0.75)
         IQR = Q3 - Q1
-        lower_bound = Q1 - 2.5 * IQR
-        upper_bound = Q3 + 2.5 * IQR
+        lower_bound = Q1 - 2 * IQR
+        upper_bound = Q3 + 2 * IQR
         return df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
     
     data = remove_outliers(data, 'PastY')
