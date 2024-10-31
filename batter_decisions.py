@@ -5,13 +5,14 @@ from matplotlib.ticker import FormatStrFormatter
 import matplotlib.image as mpimg
 import streamlit as st
 
-data = pd.read_csv('restrictedcounty copy.csv')
+data = pd.read_csv('Champo 2024 Full copy.csv')
 player_names = data['Batter'].unique()
 
 @st.cache_data
 def swingdecisions(batter):
     # Load data
-    data = pd.read_csv('restrictedcounty copy.csv')
+    data1 = pd.read_csv('Champo 2024 Full copy.csv')
+    data = data1[(~data1['PastY'].isna()) & (~data1['PastZ'].isna())]
     
     # Remove outliers
     def remove_outliers(df, column):
